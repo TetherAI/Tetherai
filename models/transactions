@@ -1,0 +1,33 @@
+const mongoose = require("mongoose")
+
+const Schema = new mongoose.Schema({
+    user_id: {
+        required: true,
+        ref: 'UserTable'
+    },
+    type: {
+        type: String,
+        required: true,
+    },
+    balance: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    create: {
+        type: Date,
+        default: () => {
+            return new Date()
+        }
+    },
+    update: {
+        type: Date,
+        default: () => {
+            return new Date()
+        }
+    },
+})
+
+const transaction = mongoose.model("transaction", Schema);
+
+module.exports = transaction;
