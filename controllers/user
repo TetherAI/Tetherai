@@ -1,0 +1,138 @@
+const axios = require("axios")
+
+const {generateRandomString, addErrorLog} = require('../utils/funcs')
+const check = require('../jobs/check')
+const UserTable = require('../models/UserTable')
+const transaction = require('../models/transaction')
+
+exports.verifyEmail = async (req, res) => {
+    if (req.user.verify === null) {
+        return res.redirect('users/wallet')
+    } else {
+        const time = parseInt((new Date(req.user.timeVerify) - new Date(Date.now())) / (1000))
+        res.render('users/verifyEmail', {
+            pageTitle: "verify Email",
+            layout: "./layouts/user/main",
+            user: req.user,
+            time
+        })
+    }
+}
+
+exports.resendVerifyEmail = async (req, res) => {
+    let user = req.user
+    const token = generateRandomString(100)
+    let timeVerify = new Date()
+    timeVerify.setMinutes(timeVerify.getMinutes() + 5)
+    user.verify = token
+    user.timeVerify = timeVerify
+    user.save()
+    try {
+        return res.status(200).send({
+            status: 200,
+            message: "Verify email was sent to your email.check your email inbox or spam.",
+            data: {reload: true}
+        })
+    } catch (err) {
+        console.log(err)
+        return res.status(500).send({status: 500, message: "Server Error! Please try later."})
+    }
+
+}
+
+exports.subsets = async (req, res) => {
+    try {
+        const subsets = await UserTable.find({register: req.user.invited}).select('email updatedAt')
+        return res.render("users/subsets", {
+            pageTitle: "Subsets",
+            layout: "./layouts/user/main",
+            user: req.user,
+            subsets
+        })
+    } catch (e) {
+        console.log("error in subsets", e)
+        await addErrorLog(__filename, `${new Date().toLocaleDateString()} - ${new Date().toLocaleTimeString()} ==> error in subsets : ${e}\``)
+        return false
+        // return get500(res)
+    }
+}
+
+exports.wallet = async (req, res) => {
+    try {
+        await check(req.user.id)
+        const subsets = await UserTable.find({register: req.user.invited}).sort({create:-1}).limit(5)
+        const referrals = await UserTable.find({register: req.user.invited}).count()
+
+        let axios_api
+        try {
+            axios_api = await axios.post('https://api.qrcode-monkey.com//qr/custom', {
+                "data": asset.wallet,
+                "config": {
+                    "body": "circle",
+                    "eye": "frame1",
+                    "eyeBall": "ball1",
+                    "erf1": [
+                        "fh"
+                    ],
+                    "erf2": [],
+                    "erf3": [
+                        "fh",
+                        "fv"
+                    ],
+                    "brf1": [
+                        "fh"
+                    ],
+                    "brf2": [],
+                    "brf3": [
+                        "fh",
+                        "fv"
+                    ],
+                    "bodyColor": "#26A17B",
+                    "bgColor": "#FFFFFF",
+                    "eye1Color": "#26A17B",
+                    "eye2Color": "#26A17B",
+                    "eye3Color": "#26A17B",
+                    "eyeBall1Color": "#26A17B",
+                    "eyeBall2Color": "#26A17B",
+                    "eyeBall3Color": "#26A17B",
+                    "gradientColor1": "",
+                    "gradientColor2": "",
+                    "gradientType": "linear",
+                    "gradientOnEyes": false,
+                    "logo": "b0431056a87d514a3ac9c58586b8b2e6c08f39e7.png",
+                    "logoMode": "default"
+                },
+                "size": 300,
+                "download": "imageUrl",
+                "file": "svg"
+            })
+        } catch (e) {
+            return false
+        }
+
+        res.render('users/wallet', {
+            pageTitle: "Dashboard",
+            layout: "./layouts/user/main",
+            user: req.user,
+            qrcode: axios_api.data.imageUrl,
+            subsets,
+            referrals
+        })
+    } catch (e) {
+        return false
+    }
+}
+
+exports.transactions = async (req, res) => {
+    try {
+        const transactions = await transaction.find({user_id: req.user.id}).sort({create: -1})
+        return res.render("users/transactions", {
+            pageTitle: "transactions",
+            layout: "./layouts/user/main",
+            user: req.user,
+            transactions
+        })
+    } catch (e) {
+        return false
+    }
+}
