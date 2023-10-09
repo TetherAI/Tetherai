@@ -1,0 +1,53 @@
+const {get500, get404, addErrorLog} = require('../utils/funcs')
+
+exports.dashboard = async (req, res) => {
+    res.render('admin/dashboard', {
+        pageTitle: "Dashboard",
+        layout: "./layouts/admin/main",
+        user: req.user,
+    })
+}
+
+exports.users = async (req, res) => {
+    try {
+        return res.render("admin/users", {
+            pageTitle: "Users List",
+            layout: "./layouts/admin/main",
+            user: req.user,
+        })
+    } catch (err) {
+        console.log(err)
+        await addErrorLog(__filename, `${new Date().toLocaleDateString()} - ${new Date().toLocaleTimeString()} ==> error in users : ${err}\``)
+        get500(res)
+    }
+}
+
+exports.transactions = async (req, res) => {
+    try {
+        return res.render("admin/transactions", {
+            pageTitle: "Transactions",
+            layout: "./layouts/admin/main",
+            user: req.user,
+        })
+    } catch (err) {
+        await addErrorLog(__filename, `${new Date().toLocaleDateString()} - ${new Date().toLocaleTimeString()} ==> error in transactions : ${err}\``)
+        return res.status(500).send({status: 500, message: "something was wrong! please try later."})
+    }
+}
+
+exports.setting = async (req, res) => {
+    try {
+        const timer = await Setting.findOne({name: "timer"}).select('field')
+        const profd = await Setting.findOne({name: "profd"}).select('field')
+        return res.render('admin/setting', {
+            pageTitle: "Setting",
+            layout: "./layouts/admin/main",
+            user: req.user,
+            timer,
+            profd,
+        })
+    } catch (err) {
+        await addErrorLog(__filename, `${new Date().toLocaleDateString()} - ${new Date().toLocaleTimeString()} ==> error in settingForm : ${err}\``)
+        get404(res)
+    }
+}
